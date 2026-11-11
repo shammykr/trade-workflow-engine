@@ -1,0 +1,57 @@
+# One-command stack: docker compose up -d --build
+# API http://localhost:8080 (RFQs at /api/rfqs, health at /actuator/health)
+# PostgreSQL localhost:5432, Kafka API (Redpanda) localhost:19092
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: workflow
+      POSTGRES_USER: workflow
+      POSTGRES_PASSWORD: workflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workflow -d workflow"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redpanda:
+    image: redpandadata/redpanda:v26.2.6
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=512M
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true'"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build: .
+    image: trade-workflow-engine:latest
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/workflow
+      DB_USER: workflow
+      DB_PASSWORD: workflow
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+
+volumes:
+  pgdata:
