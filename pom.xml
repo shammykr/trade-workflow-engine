@@ -128,6 +128,8 @@
           <compilerArgs>
             <arg>-Xlint:all</arg>
             <arg>-Xlint:-processing</arg>
+            <!-- JPA entities must be non-final, so constructors that pass `this` would always warn. -->
+            <arg>-Xlint:-this-escape</arg>
             <arg>-Werror</arg>
           </compilerArgs>
         </configuration>
