@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: trade-workflow-engine
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/workflow}
+    username: ${DB_USER:workflow}
+    password: ${DB_PASSWORD:workflow}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # schema is owned by Flyway (db/migration)
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        linger.ms: 5
+    consumer:
+      group-id: trade-workflow-engine
+      auto-offset-reset: earliest
+      properties:
+        isolation.level: read_committed
+
+server:
+  shutdown: graceful
+
+logging:
+  structured:
+    format:
+      console: logstash           # one JSON object per line; MDC and SLF4J key/values become fields
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+workflow:
+  quote-ttl: 30s
+  expiry-check-interval: 1s
+  pricing:
+    base-url: ${PRICING_BASE_URL:}   # empty: call this application's stub pricing endpoint
+    timeout: 2s
+
+# Simulated external systems (pricing engine, booking system), hosted in this application.
+stubs:
+  enabled: true
+  pricing:
+    min-latency: 50ms
+    max-latency: 200ms
+    max-notional: 50000000
+  booking:
+    latency: 100ms
+    blocked-client-prefix: BLOCKED
