@@ -1,6 +1,7 @@
 package com.shammykr.tradeworkflow.api;
 
 import com.shammykr.tradeworkflow.domain.InvalidTransitionException;
+import com.shammykr.tradeworkflow.observability.WorkflowMetrics;
 import com.shammykr.tradeworkflow.workflow.QuoteExpiredException;
 import com.shammykr.tradeworkflow.workflow.RfqNotFoundException;
 import com.shammykr.tradeworkflow.workflow.StaleVersionException;
@@ -14,6 +15,12 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 /** Maps workflow failures to RFC 9457 problem details. */
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+
+  private final WorkflowMetrics metrics;
+
+  public ApiExceptionHandler(WorkflowMetrics metrics) {
+    this.metrics = metrics;
+  }
 
   @ExceptionHandler(RfqNotFoundException.class)
   ProblemDetail notFound(RfqNotFoundException e) {
@@ -33,6 +40,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
   /** Another request changed the RFQ between our read and our write (JPA @Version). */
   @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
   ProblemDetail concurrentUpdate(ObjectOptimisticLockingFailureException e) {
+    metrics.optimisticLockConflict("api");
     return problem(
         HttpStatus.CONFLICT,
         "Concurrent update",

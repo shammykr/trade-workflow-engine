@@ -5,7 +5,7 @@ create table rfq (
     underlier          varchar(32)    not null,
     product_type       varchar(40)    not null,
     notional           numeric(19, 2) not null check (notional > 0),
-    currency           char(3)        not null,
+    currency           varchar(3)     not null,
     maturity_months    integer        not null check (maturity_months > 0),
     status             varchar(16)    not null,
     rejection_reason   varchar(32),
