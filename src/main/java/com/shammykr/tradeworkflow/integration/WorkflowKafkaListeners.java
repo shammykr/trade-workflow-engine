@@ -11,7 +11,11 @@ import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-/** Inbound Kafka integration: prices from the pricing service, answers from the booking system. */
+/**
+ * Inbound Kafka integration: prices from the pricing service, answers from the booking system. The
+ * topic and offset go into the MDC so every log line written while handling a message carries them
+ * (the RFQ id is already a structured field on the workflow's own log lines).
+ */
 @Component
 public class WorkflowKafkaListeners {
 
@@ -26,11 +30,13 @@ public class WorkflowKafkaListeners {
   @KafkaListener(topics = Topics.PRICING_RESPONSES, groupId = "${spring.kafka.consumer.group-id}")
   public void onPricingResponse(ConsumerRecord<String, String> record)
       throws JsonProcessingException {
-    MDC.put("rfqId", record.key());
+    MDC.put("kafkaTopic", record.topic());
+    MDC.put("kafkaOffset", Long.toString(record.offset()));
     try {
       workflow.onPricingResponse(json.readValue(record.value(), PricingResponse.class));
     } finally {
-      MDC.remove("rfqId");
+      MDC.remove("kafkaTopic");
+      MDC.remove("kafkaOffset");
     }
   }
 
@@ -39,11 +45,13 @@ public class WorkflowKafkaListeners {
       groupId = "${spring.kafka.consumer.group-id}")
   public void onBookingConfirmation(ConsumerRecord<String, String> record)
       throws JsonProcessingException {
-    MDC.put("rfqId", record.key());
+    MDC.put("kafkaTopic", record.topic());
+    MDC.put("kafkaOffset", Long.toString(record.offset()));
     try {
       workflow.onBookingConfirmation(json.readValue(record.value(), BookingConfirmation.class));
     } finally {
-      MDC.remove("rfqId");
+      MDC.remove("kafkaTopic");
+      MDC.remove("kafkaOffset");
     }
   }
 }

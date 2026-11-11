@@ -67,7 +67,6 @@ import org.testcontainers.redpanda.RedpandaContainer;
       "stubs.pricing.min-latency=10ms",
       "stubs.pricing.max-latency=50ms",
       "stubs.booking.latency=50ms",
-      "logging.structured.format.console=",
     })
 @Testcontainers
 @AutoConfigureObservability
